@@ -1,0 +1,128 @@
+import { useEffect, useRef } from 'react';
+import MessageBubble from './MessageBubble';
+import { ChatIcon } from '../common/Icons';
+
+function MessageList({
+  messages = [],
+  currentUserId,
+  loading = false,
+  highlightedMessageId = null,
+  hasMore = false,
+  loadingOlder = false,
+  onLoadOlder = null,
+  onReply = null,
+  onForward = null,
+  onEdit = null,
+  onDelete = null,
+  onDeleteForMe = null,
+  onCreateTodo = null,
+  onShowInfo = null,
+  onSelectMessage = null,
+  onReaction = null,
+  savedMessageIds = new Set(),
+  onSave = null,
+  onUnsave = null,
+  onPin = null,
+  onUnpin = null,
+  onMarkLinkCopied = null,
+  onOpenPollModal = null,
+}) {
+  const bottomRef = useRef(null);
+  const containerRef = useRef(null);
+
+  // Auto-scroll logic: if highlightedMessageId exists, scroll to that message; else scroll to bottom
+  useEffect(() => {
+    if (highlightedMessageId) {
+      const el = document.getElementById(`msg-${highlightedMessageId}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+    }
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, highlightedMessageId]);
+
+  if (loading) {
+    return (
+      <div className="message-list-container empty-messages-center">
+        <span className="empty-chat-hint">Loading conversation history...</span>
+      </div>
+    );
+  }
+
+  if (messages.length === 0) {
+    return (
+      <div className="message-list-container empty-messages-center">
+        <div className="empty-chat-box">
+          <div className="empty-chat-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <ChatIcon size={38} color="#0284c7" strokeWidth={1.75} />
+          </div>
+          <p className="empty-chat-title">No messages yet</p>
+          <p className="empty-chat-hint">Send a message below to start the conversation!</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="message-list-container" ref={containerRef}>
+      {/* Load Older Messages Pagination Header */}
+      {hasMore && (
+        <div className="load-older-container">
+          <button
+            type="button"
+            className="btn-load-older-messages"
+            onClick={onLoadOlder}
+            disabled={loadingOlder}
+          >
+            {loadingOlder ? (
+              <span>Loading older messages...</span>
+            ) : (
+              <span>↑ Load older messages</span>
+            )}
+          </button>
+        </div>
+      )}
+
+      <div className="messages-stream">
+        <div className="message-date-divider">
+          <span>Conversation History</span>
+        </div>
+
+        {messages.map((msg) => {
+          const msgId = (msg._id || msg.id)?.toString();
+          const isTarget = highlightedMessageId && msgId === highlightedMessageId.toString();
+
+          return (
+            <MessageBubble
+              key={msgId || msg.createdAt}
+              message={msg}
+              currentUserId={currentUserId}
+              isHighlighted={isTarget}
+              onReply={onReply}
+              onForward={onForward}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              onDeleteForMe={onDeleteForMe}
+              onCreateTodo={onCreateTodo}
+              onShowInfo={onShowInfo}
+              onSelectMessage={onSelectMessage}
+              onReaction={onReaction}
+              isSaved={savedMessageIds.has(msgId)}
+              isPinned={Boolean(msg.pinned)}
+              onSave={onSave}
+              onUnsave={onUnsave}
+              onPin={onPin}
+              onUnpin={onUnpin}
+              onMarkLinkCopied={onMarkLinkCopied}
+              onOpenPollModal={onOpenPollModal}
+            />
+          );
+        })}
+        <div ref={bottomRef} />
+      </div>
+    </div>
+  );
+}
+
+export default MessageList;
