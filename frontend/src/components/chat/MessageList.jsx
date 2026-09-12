@@ -7,6 +7,7 @@ function MessageList({
   currentUserId,
   loading = false,
   highlightedMessageId = null,
+  replyingToId = null,
   hasMore = false,
   loadingOlder = false,
   onLoadOlder = null,
@@ -30,16 +31,25 @@ function MessageList({
   const bottomRef = useRef(null);
   const containerRef = useRef(null);
 
-  // Auto-scroll logic: if highlightedMessageId exists, scroll to that message; else scroll to bottom
+  // Auto-scroll logic: if highlightedMessageId exists, scroll to that message; else scroll to bottom of container
   useEffect(() => {
     if (highlightedMessageId) {
       const el = document.getElementById(`msg-${highlightedMessageId}`);
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (el && containerRef.current) {
+        const elTop = el.offsetTop;
+        containerRef.current.scrollTo({
+          top: Math.max(0, elTop - containerRef.current.clientHeight / 2),
+          behavior: 'smooth',
+        });
         return;
       }
     }
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (containerRef.current) {
+      containerRef.current.scrollTo({
+        top: containerRef.current.scrollHeight,
+        behavior: 'smooth',
+      });
+    }
   }, [messages, highlightedMessageId]);
 
   if (loading) {
@@ -89,9 +99,22 @@ function MessageList({
           <span>Conversation History</span>
         </div>
 
-        {messages.map((msg) => {
+        {messages.map((msg, index) => {
           const msgId = (msg._id || msg.id)?.toString();
           const isTarget = highlightedMessageId && msgId === highlightedMessageId.toString();
+          const prevMsg = index > 0 ? messages[index - 1] : null;
+          const currentSenderId = (msg.sender?._id || msg.sender?.id || msg.sender)?.toString();
+          const prevSenderId = prevMsg ? (prevMsg.sender?._id || prevMsg.sender?.id || prevMsg.sender)?.toString() : null;
+          const currentTime = msg.createdAt ? new Date(msg.createdAt).getTime() : 0;
+          const prevTime = prevMsg?.createdAt ? new Date(prevMsg.createdAt).getTime() : 0;
+          const isWithinTimeWindow = !currentTime || !prevTime || Math.abs(currentTime - prevTime) < 5 * 60 * 1000;
+          const isConsecutive = Boolean(
+            prevSenderId &&
+            currentSenderId === prevSenderId &&
+            !msg.type &&
+            !prevMsg.type &&
+            isWithinTimeWindow
+          );
 
           return (
             <MessageBubble
@@ -99,6 +122,8 @@ function MessageList({
               message={msg}
               currentUserId={currentUserId}
               isHighlighted={isTarget}
+              isReplyTarget={Boolean(replyingToId && msgId === replyingToId)}
+              isConsecutive={isConsecutive}
               onReply={onReply}
               onForward={onForward}
               onEdit={onEdit}

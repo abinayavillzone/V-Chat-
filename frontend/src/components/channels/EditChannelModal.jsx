@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 function EditChannelModal({ isOpen, onClose, channel, onSave }) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [isAdminOnly, setIsAdminOnly] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -10,6 +11,7 @@ function EditChannelModal({ isOpen, onClose, channel, onSave }) {
     if (channel) {
       setName(channel.name || '');
       setDescription(channel.description || '');
+      setIsAdminOnly(Boolean(channel.isAdminOnly));
       setError(null);
     }
   }, [channel, isOpen]);
@@ -30,6 +32,7 @@ function EditChannelModal({ isOpen, onClose, channel, onSave }) {
       await onSave({
         name: cleanName,
         description: description.trim(),
+        isAdminOnly,
       });
       onClose();
     } catch (err) {
@@ -95,6 +98,19 @@ function EditChannelModal({ isOpen, onClose, channel, onSave }) {
               onChange={(e) => setDescription(e.target.value)}
               maxLength={250}
             />
+          </div>
+
+          <div className="form-group">
+            <label className="checkbox-option-label" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginTop: '8px' }}>
+              <input
+                type="checkbox"
+                checked={isAdminOnly}
+                onChange={(e) => setIsAdminOnly(e.target.checked)}
+              />
+              <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                Admin Only Channel (Only channel admins can send messages)
+              </span>
+            </label>
           </div>
 
           <div className="modal-actions">

@@ -174,7 +174,7 @@ function AddChannelMemberModal({
                   Add Members
                 </h3>
                 <span className="add-member-channel-tag">
-                  #{channel.name}
+                  {channel.name}
                 </span>
               </div>
               <p className="add-member-subtitle">
@@ -275,7 +275,6 @@ function AddChannelMemberModal({
             <div className="add-member-list-header">
               <div className="list-heading-group">
                 <span className="list-heading">Workspace Teammates</span>
-                <span className="list-count-badge">{filteredUsers.length}</span>
               </div>
               {nonMemberFilteredCount > 0 && (
                 <button

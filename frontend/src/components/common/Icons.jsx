@@ -333,3 +333,117 @@ export const AttachIcon = ({ size = 18, color = 'currentColor', strokeWidth = 2,
   </SvgIcon>
 );
 
+// 37. REMINDER / BELL ICON
+export const ReminderIcon = ({ size = 18, color = 'currentColor', strokeWidth = 2, className, style }) => (
+  <SvgIcon size={size} color={color} strokeWidth={strokeWidth} className={className} style={style}>
+    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+  </SvgIcon>
+);
+
+export const BellOffIcon = ({ size = 18, color = 'currentColor', strokeWidth = 2, className, style }) => (
+  <SvgIcon size={size} color={color} strokeWidth={strokeWidth} className={className} style={style}>
+    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+    <path d="M18.63 13A17.89 17.89 0 0 1 18 8" />
+    <path d="M6.26 6.26A5.86 5.86 0 0 0 6 8c0 7-3 9-3 9h14" />
+    <path d="M18 8a6 6 0 0 0-9.33-5" />
+    <line x1="1" y1="1" x2="23" y2="23" />
+  </SvgIcon>
+);
+
+// 38. NOTE / PRIVATE NOTE ICON
+export const NoteIcon = ({ size = 18, color = 'currentColor', strokeWidth = 2, className, style }) => (
+  <SvgIcon size={size} color={color} strokeWidth={strokeWidth} className={className} style={style}>
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+    <polyline points="14 2 14 8 20 8" />
+    <line x1="16" y1="13" x2="8" y2="13" />
+    <line x1="16" y1="17" x2="8" y2="17" />
+    <line x1="10" y1="9" x2="8" y2="9" />
+  </SvgIcon>
+);
+
+// 39. EDIT ICON
+export const EditIcon = ({ size = 18, color = 'currentColor', strokeWidth = 2, className, style }) => (
+  <SvgIcon size={size} color={color} strokeWidth={strokeWidth} className={className} style={style}>
+    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+  </SvgIcon>
+);
+
+// 40. TRASH / DELETE ICON
+export const TrashIcon = ({ size = 18, color = 'currentColor', strokeWidth = 2, className, style }) => (
+  <SvgIcon size={size} color={color} strokeWidth={strokeWidth} className={className} style={style}>
+    <polyline points="3 6 5 6 21 6" />
+    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+  </SvgIcon>
+);
+
+// 41. CLOCK / TIME ICON
+export const ClockIcon = ({ size = 18, color = 'currentColor', strokeWidth = 2, className, style }) => (
+  <SvgIcon size={size} color={color} strokeWidth={strokeWidth} className={className} style={style}>
+    <circle cx="12" cy="12" r="10" />
+    <polyline points="12 6 12 12 16 14" />
+  </SvgIcon>
+);
+
+// 42. AUDIO CALL / PHONE ICON
+export const AudioCallIcon = ({ size = 18, color = 'currentColor', strokeWidth = 2, className, style }) => (
+  <SvgIcon size={size} color={color} strokeWidth={strokeWidth} className={className} style={style}>
+    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+  </SvgIcon>
+);
+
+export const PhoneIcon = AudioCallIcon;
+
+// 43. VIDEO CALL / CAMERA ICON
+export const VideoCallIcon = ({ size = 18, color = 'currentColor', strokeWidth = 2, className, style }) => (
+  <SvgIcon size={size} color={color} strokeWidth={strokeWidth} className={className} style={style}>
+    <polygon points="23 7 16 12 23 17 23 7" />
+    <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+  </SvgIcon>
+);
+
+export const VideoIcon = VideoCallIcon;
+
+// 44. PHONE OFF / DECLINE / END CALL ICON
+export const PhoneOffIcon = ({ size = 18, color = 'currentColor', strokeWidth = 2, className, style }) => (
+  <SvgIcon size={size} color={color} strokeWidth={strokeWidth} className={className} style={style}>
+    <path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-3.33-2.67m-2.67-3.34a19.79 19.79 0 0 1-3.07-8.63A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91" />
+    <line x1="1" y1="1" x2="23" y2="23" />
+  </SvgIcon>
+);
+
+// 45. MIC ICON
+export const MicIcon = ({ size = 18, color = 'currentColor', strokeWidth = 2, className, style }) => (
+  <SvgIcon size={size} color={color} strokeWidth={strokeWidth} className={className} style={style}>
+    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+    <line x1="12" y1="19" x2="12" y2="23" />
+    <line x1="8" y1="23" x2="16" y2="23" />
+  </SvgIcon>
+);
+
+// 46. MIC OFF ICON
+export const MicOffIcon = ({ size = 18, color = 'currentColor', strokeWidth = 2, className, style }) => (
+  <SvgIcon size={size} color={color} strokeWidth={strokeWidth} className={className} style={style}>
+    <line x1="1" y1="1" x2="23" y2="23" />
+    <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6" />
+    <path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23" />
+    <line x1="12" y1="19" x2="12" y2="23" />
+    <line x1="8" y1="23" x2="16" y2="23" />
+  </SvgIcon>
+);
+
+// 47. VIDEO OFF ICON
+export const VideoOffIcon = ({ size = 18, color = 'currentColor', strokeWidth = 2, className, style }) => (
+  <SvgIcon size={size} color={color} strokeWidth={strokeWidth} className={className} style={style}>
+    <line x1="1" y1="1" x2="23" y2="23" />
+    <path d="M21 21l-4.35-4.35M23 7l-7 5 7 5V7z" />
+    <path d="M16 16a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2" />
+  </SvgIcon>
+);
+
+
+
+
+

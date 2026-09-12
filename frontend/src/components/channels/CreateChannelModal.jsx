@@ -9,6 +9,7 @@ function CreateChannelModal({ isOpen, onClose, onCreateChannel }) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [isPrivate, setIsPrivate] = useState(false);
+  const [isAdminOnly, setIsAdminOnly] = useState(false);
   const [orgSettings, setOrgSettings] = useState({
     allowPublicChannels: true,
     allowPrivateChannels: true,
@@ -73,10 +74,12 @@ function CreateChannelModal({ isOpen, onClose, onCreateChannel }) {
         name: name.trim(),
         description: description.trim(),
         isPrivate,
+        isAdminOnly,
       });
       setName('');
       setDescription('');
       setIsPrivate(false);
+      setIsAdminOnly(false);
       onClose();
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to create channel');
@@ -161,7 +164,23 @@ function CreateChannelModal({ isOpen, onClose, onCreateChannel }) {
                     onChange={() => !publicDisabled && setIsPrivate(false)}
                     disabled={creationDisabled || publicDisabled || loadingSettings}
                   />
-                  <span className="visibility-option-icon">👥</span>
+                  <span className="visibility-option-icon">
+                    <svg
+                      viewBox="0 0 24 24"
+                      width="16"
+                      height="16"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                      <circle cx="9" cy="7" r="4" />
+                      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                    </svg>
+                  </span>
                   <span className="visibility-option-title">
                     Public Channel {publicDisabled && <span className="policy-note">(Policy Disabled)</span>}
                   </span>
@@ -198,6 +217,20 @@ function CreateChannelModal({ isOpen, onClose, onCreateChannel }) {
                 </div>
               </label>
             </div>
+          </div>
+
+          <div className="form-group">
+            <label className="checkbox-option-label" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginTop: '8px' }}>
+              <input
+                type="checkbox"
+                checked={isAdminOnly}
+                onChange={(e) => setIsAdminOnly(e.target.checked)}
+                disabled={creationDisabled || loadingSettings}
+              />
+              <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                Admin Only Channel (Only channel admins can send messages)
+              </span>
+            </label>
           </div>
 
           <div className="modal-actions">

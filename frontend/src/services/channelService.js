@@ -13,11 +13,12 @@ export const getChannel = async (channelId) => {
 };
 
 // Create a new channel
-export const createChannel = async ({ name, description, isPrivate = false }) => {
+export const createChannel = async ({ name, description, isPrivate = false, isAdminOnly = false }) => {
   const response = await api.post('/channels', {
     name,
     description,
     isPrivate,
+    isAdminOnly,
   });
   return response.data;
 };
@@ -41,9 +42,15 @@ export const addChannelMembers = async (channelId, userIds) => {
   return response.data;
 };
 
-// Update channel details (name, description)
-export const updateChannel = async (channelId, { name, description }) => {
-  const response = await api.put(`/channels/${channelId}`, { name, description });
+// Promote a channel member to Channel Admin
+export const promoteChannelAdmin = async (channelId, userId) => {
+  const response = await api.post(`/channels/${channelId}/admins`, { userId });
+  return response.data;
+};
+
+// Update channel details (name, description, isAdminOnly)
+export const updateChannel = async (channelId, { name, description, isAdminOnly }) => {
+  const response = await api.put(`/channels/${channelId}`, { name, description, isAdminOnly });
   return response.data;
 };
 

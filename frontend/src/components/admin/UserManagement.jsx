@@ -575,38 +575,29 @@ function UserManagement({ currentAdminId }) {
                       <td className="font-semibold">{inv.email}</td>
                       <td className="text-muted">{inv.invitedBy?.name || inv.invitedBy?.email || 'Admin'}</td>
                       <td>
-                        <span
-                          className={`status-pill ${
-                            inv.status === 'accepted'
-                              ? 'status-active'
-                              : inv.status === 'pending'
-                              ? 'status-pending'
-                              : 'status-inactive'
-                          }`}
-                        >
-                          <span
-                            className={`dot ${
-                              inv.status === 'accepted'
-                                ? 'dot-emerald'
-                                : inv.status === 'pending'
-                                ? 'dot-amber'
-                                : 'dot-rose'
-                            }`}
-                          />
+                        <span className={`status-pill status-${inv.status || 'pending'}`}>
+                          <span className="dot" />
                           {inv.status.charAt(0).toUpperCase() + inv.status.slice(1)}
                         </span>
                       </td>
                       <td className="text-muted">{formatDate(inv.createdAt)}</td>
                       <td className="text-muted">{formatDate(inv.expiresAt)}</td>
                       <td className="text-right">
-                        {inv.status === 'pending' && (
-                          <button
-                            type="button"
-                            className="btn-action-small btn-danger"
-                            onClick={() => handleRevokePrompt(inv)}
-                          >
-                            Revoke
-                          </button>
+                        {inv.status === 'pending' ? (
+                          <div className="table-actions-group">
+                            <button
+                              type="button"
+                              className="btn-action-small btn-danger"
+                              onClick={() => handleRevokePrompt(inv)}
+                              title="Revoke invitation"
+                            >
+                              Revoke
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-muted" style={{ fontSize: '0.85rem', paddingRight: '12px' }}>
+                            —
+                          </span>
                         )}
                       </td>
                     </tr>
@@ -733,18 +724,57 @@ function UserManagement({ currentAdminId }) {
 
       {/* Confirmation Modal for Revoking Invitations */}
       {modalState.isOpen && modalState.type === 'revoke-invitation' && (
-        <AdminConfirmModal
-          isOpen={modalState.isOpen}
-          title={`Revoke Invitation for ${modalState.invitation?.email}`}
-          message={`Are you sure you want to revoke the invitation sent to "${modalState.invitation?.email}"? They will no longer be able to join using this invitation.`}
-          confirmText="Revoke Invitation"
-          isDanger={true}
-          loading={modalState.loading}
-          onConfirm={handleConfirmAction}
-          onCancel={() =>
+        <div
+          className="modal-backdrop"
+          onClick={() =>
             setModalState({ isOpen: false, type: null, user: null, invitation: null, nextValue: null, loading: false })
           }
-        />
+        >
+          <div className="modal-container admin-edit-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">
+                Revoke Invitation
+              </h3>
+              <button
+                type="button"
+                className="btn-modal-close"
+                onClick={() =>
+                  setModalState({ isOpen: false, type: null, user: null, invitation: null, nextValue: null, loading: false })
+                }
+                disabled={modalState.loading}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="modal-body">
+              <p style={{ margin: 0, fontSize: '0.92rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>
+                Are you sure you want to revoke the invitation sent to &quot;{modalState.invitation?.email}&quot;? They will no longer be able to join using this invitation.
+              </p>
+            </div>
+
+            <div className="modal-footer">
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() =>
+                  setModalState({ isOpen: false, type: null, user: null, invitation: null, nextValue: null, loading: false })
+                }
+                disabled={modalState.loading}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn-danger"
+                onClick={handleConfirmAction}
+                disabled={modalState.loading}
+              >
+                {modalState.loading ? 'Revoking...' : 'Revoke Invitation'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

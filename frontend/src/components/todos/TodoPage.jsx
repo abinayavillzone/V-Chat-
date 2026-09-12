@@ -25,6 +25,7 @@ function TodoPage({
   isPlanDisabled = false,
   isExpired = false,
   isSuspended = false,
+  onAddToCalendar,
 }) {
   const { user } = useAuth();
   const { socket } = useSocket();
@@ -396,6 +397,7 @@ function TodoPage({
               onNavigateToChannel={onNavigateToChannel}
               onNavigateToMessage={onNavigateToMessage}
               onOpenCreateModal={() => handleOpenCreateModal()}
+              onAddToCalendar={onAddToCalendar}
             />
           );
         })()}

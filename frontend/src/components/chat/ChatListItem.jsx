@@ -1,5 +1,5 @@
 import Avatar from '../common/Avatar';
-import { LockIcon, ChannelIcon, PinIcon } from '../common/Icons';
+import { LockIcon, ChannelIcon, PinIcon, BellOffIcon } from '../common/Icons';
 
 // Helper to format ISO dates into human-friendly time labels
 const formatChatTime = (dateString) => {
@@ -40,6 +40,15 @@ function ChatListItem({
   let time = '';
   let isMuted = Boolean(chat.muted);
 
+  const isSelfConv =
+    chat.isMe ||
+    (chat.participants &&
+      Array.isArray(chat.participants) &&
+      chat.participants.length > 0 &&
+      chat.participants.every(
+        (p) => (p._id || p.id || p)?.toString() === currentUserId?.toString()
+      ));
+
   if (isChannel) {
     // Channel Item
     displayName = chat.name;
@@ -67,16 +76,6 @@ function ChatListItem({
       }
     }
   } else if (chat.participants && Array.isArray(chat.participants)) {
-    // Check if this is a Self Conversation ("Me" / Notes to self)
-    const isSelfConv =
-      chat.isMe ||
-      (chat.participants &&
-        Array.isArray(chat.participants) &&
-        chat.participants.length > 0 &&
-        chat.participants.every(
-          (p) => (p._id || p.id || p)?.toString() === currentUserId?.toString()
-        ));
-
     if (isSelfConv) {
       displayName = 'Me';
       displayAvatar = (chat.participants && chat.participants[0]?.avatar) || chat.avatar;
@@ -121,13 +120,20 @@ function ChatListItem({
     status = chat.status || 'offline';
   }
 
-  const unreadCount = Number(chat.unread || 0);
+  const unreadCount = isSelfConv ? 0 : Number(chat.unread || 0);
 
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       className={`chat-list-item ${isSelected ? 'selected' : ''} ${isChannel ? 'channel-chat-item' : ''}`}
       onClick={() => onSelect(chat)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onSelect(chat);
+        }
+      }}
       aria-label={`Open ${displayName}`}
     >
       <div className="chat-item-avatar">
@@ -148,40 +154,35 @@ function ChatListItem({
         <div className="chat-item-header">
           <span className="chat-item-name" title={displayName}>
             {displayName}
-            {isPinned && (
-              <span className="pinned-badge-indicator" title="Pinned to top">
-                <PinIcon size={12} strokeWidth={2.2} />
-              </span>
-            )}
-            {isMuted && <span className="mute-icon-indicator" title="Muted"> 🔕</span>}
+            {isMuted && <span className="mute-icon-indicator" title="Muted"><BellOffIcon size={14} color="var(--text-muted)" style={{ marginTop: '2px' }} /></span>}
           </span>
-          <div className="chat-item-header-actions">
-            {onTogglePin && (
-              <button
-                type="button"
-                className={`btn-pin-item ${isPinned ? 'pinned-active' : ''}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onTogglePin();
-                }}
-                title={isPinned ? 'Unpin from sidebar' : 'Pin to sidebar'}
-                aria-label={isPinned ? 'Unpin from sidebar' : 'Pin to sidebar'}
-              >
-                <PinIcon size={13} strokeWidth={2.2} />
-              </button>
-            )}
-            <span className="chat-item-time">{time}</span>
-          </div>
+          <span className="chat-item-time">{time}</span>
         </div>
 
         <div className="chat-item-footer">
           <p className="chat-item-snippet">{snippet}</p>
-          {unreadCount > 0 && (
-            <span className="unread-badge">{unreadCount}</span>
-          )}
+          <div className="chat-item-footer-right">
+            {unreadCount > 0 && (
+              <span className="unread-badge">{unreadCount}</span>
+            )}
+            {onTogglePin && (
+              <button
+                type="button"
+                className={`btn-pin-toggle ${isPinned ? 'is-pinned' : ''}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onTogglePin();
+                }}
+                title={isPinned ? 'Unpin' : 'Pin to top'}
+                aria-label={isPinned ? 'Unpin' : 'Pin to top'}
+              >
+                <PinIcon size={12} strokeWidth={2.2} />
+              </button>
+            )}
+          </div>
         </div>
       </div>
-    </button>
+    </div>
   );
 }
 

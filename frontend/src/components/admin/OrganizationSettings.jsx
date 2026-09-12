@@ -191,13 +191,13 @@ function OrganizationSettings() {
               <div className="setting-info">
                 <div className="setting-title-row">
                   <span className="setting-icon"><MailIcon size={16} color="var(--primary-accent)" /></span>
-                  <strong>Allow Members to Invite Teammates</strong>
+                  <strong>Allow Admins to Invite Teammates</strong>
                   <span className={`setting-status-tag ${settings.allowMemberInvites ? 'tag-enabled' : 'tag-disabled'}`}>
                     {settings.allowMemberInvites ? 'ENABLED' : 'DISABLED'}
                   </span>
                 </div>
                 <p className="setting-description">
-                  When enabled, non-admin members can invite new colleagues to join this company.
+                  When enabled, admins can invite new colleagues to join this company.
                 </p>
               </div>
               <div className="setting-toggle-wrapper">

@@ -215,7 +215,7 @@ function SearchDropdown({
                             <HighlightMatch text={ch.name} query={query} />
                           </span>
                           {ch.isPrivate && (
-                            <span className="search-badge-private">Private</span>
+                            <span className="search-badge-private"></span>
                           )}
                         </div>
                         {ch.description && (

@@ -3,7 +3,7 @@ import Avatar from '../common/Avatar';
 import ReactionBar from './ReactionBar';
 import EmojiPicker from './EmojiPicker';
 import PollCard from './PollCard';
-import { TodoIcon, BookmarkIcon, PinIcon } from '../common/Icons';
+import { TodoIcon, BookmarkIcon, PinIcon, AudioCallIcon, VideoCallIcon } from '../common/Icons';
 
 // Format message timestamp
 const formatMessageTime = (dateString) => {
@@ -20,6 +20,35 @@ const formatFileSize = (bytes) => {
   const sizes = ['B', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+};
+
+// Format call duration into MM:SS format
+const formatCallDuration = (seconds) => {
+  if (!seconds || seconds <= 0) return '';
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+};
+
+// Format call status label
+const getCallStatusText = (callData, isOwn) => {
+  const status = callData?.status || 'ended';
+  const durationStr = formatCallDuration(callData?.duration);
+
+  if (status === 'ended') {
+    const dir = isOwn ? 'Outgoing' : 'Incoming';
+    return durationStr ? `${dir} · ${durationStr}` : dir;
+  }
+  if (status === 'missed') {
+    return isOwn ? 'Cancelled' : 'Missed';
+  }
+  if (status === 'declined') {
+    return 'Declined';
+  }
+  if (status === 'cancelled') {
+    return isOwn ? 'Cancelled' : 'Missed';
+  }
+  return 'Ended';
 };
 
 // Render inline formatting (bold, italic, underline) within formatted text blocks
@@ -146,6 +175,7 @@ function MessageBubble({
   message,
   currentUserId,
   isHighlighted = false,
+  isReplyTarget = false,
   onReply = null,
   onForward = null,
   onEdit = null,
@@ -163,6 +193,7 @@ function MessageBubble({
   onUnpin = null,
   onMarkLinkCopied = null,
   onOpenPollModal = null,
+  isConsecutive = false,
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState('');
@@ -311,23 +342,35 @@ function MessageBubble({
 
   const canDeleteForEveryone = isOwn && Boolean(onDelete);
 
+  // Scroll to / highlight the original message that was replied to
+  const handleReplyQuoteClick = () => {
+    const replyId = (replyTo?._id || replyTo?.id)?.toString();
+    if (replyId && typeof onSelectMessage === 'function') {
+      onSelectMessage(replyId);
+    }
+  };
+
   return (
     <div
       id={messageId ? `msg-${messageId}` : undefined}
       className={`message-bubble-wrapper ${isOwn ? 'own-wrapper' : 'other-wrapper'} ${
         isHighlighted ? 'highlighted-message-wrapper' : ''
-      } ${isDeleted ? 'deleted-message-wrapper' : ''}`}
+      } ${isDeleted ? 'deleted-message-wrapper' : ''} ${isConsecutive ? 'consecutive-message' : ''} ${
+        isReplyTarget ? 'reply-target-wrapper' : ''
+      }`}
     >
       {!isOwn && (
-        <div className="message-avatar-container">
-          <Avatar name={senderName} image={senderAvatar} size="small" />
+        <div className={`message-avatar-container ${isConsecutive ? 'avatar-hidden' : ''}`}>
+          {!isConsecutive && <Avatar name={senderName} image={senderAvatar} size="small" />}
         </div>
       )}
 
       <div
         className={`message-bubble ${isOwn ? 'message-own' : 'message-other'} ${
           isHighlighted ? 'message-highlight-pulse' : ''
-        } ${isDeleted ? 'message-deleted-bubble' : ''}`}
+        } ${isDeleted ? 'message-deleted-bubble' : ''} ${
+          isReplyTarget ? 'message-reply-target' : ''
+        } ${isEditing ? 'message-editing' : ''}`}
       >
         {/* Modern WhatsApp-Style Floating Message Action Bar */}
         {!isEditing && !isDeleted && (
@@ -564,7 +607,7 @@ function MessageBubble({
           </div>
         )}
 
-        {!isOwn && !isDeleted && (
+        {!isOwn && !isDeleted && !isConsecutive && (
           <span className="message-sender-name">{senderName}</span>
         )}
 
@@ -749,8 +792,29 @@ function MessageBubble({
               />
             )}
 
+            {/* Call History Message Card */}
+            {message.messageType === 'call' && (
+              <div className="message-call-card">
+                <div className={`call-card-icon-badge ${['missed', 'declined', 'cancelled'].includes(message.call?.status) ? 'call-missed' : ''}`}>
+                  {message.call?.callType === 'video' ? (
+                    <VideoCallIcon size={18} />
+                  ) : (
+                    <AudioCallIcon size={18} />
+                  )}
+                </div>
+                <div className="call-card-details">
+                  <span className="call-card-title">
+                    {message.call?.callType === 'video' ? 'Video Call' : 'Audio Call'}
+                  </span>
+                  <span className={`call-card-subtitle ${['missed', 'declined', 'cancelled'].includes(message.call?.status) ? 'subtitle-missed' : ''}`}>
+                    {getCallStatusText(message.call, isOwn)}
+                  </span>
+                </div>
+              </div>
+            )}
+
             {/* Text Content */}
-            {!message.poll && content && (
+            {!message.poll && message.messageType !== 'call' && content && (
               <div className="message-text">{renderMessageContent(content)}</div>
             )}
           </>
@@ -765,16 +829,7 @@ function MessageBubble({
           />
         )}
 
-        {!isDeleted && (isSaved || isPinned) && (
-          <div className="message-state-indicators" aria-label="Message state">
-            {isPinned && (
-              <span className="msg-state-pin-badge" title="Pinned message">
-                <PinIcon size={12} strokeWidth={2.2} />
-              </span>
-            )}
-            {isSaved && <span title="Saved message">🔖</span>}
-          </div>
-        )}
+
 
         {/* Emoji Picker (opened from action bar) */}
         {showReactionPicker && !isDeleted && onReaction && (
@@ -789,6 +844,11 @@ function MessageBubble({
         )}
 
         <div className="message-meta-footer">
+          {!isDeleted && isPinned && (
+            <span className="msg-state-pin-badge" title="Pinned message">
+              <PinIcon size={12} strokeWidth={2.2} />
+            </span>
+          )}
           {isEdited && !isDeleted && <span className="message-edited-badge">(edited)</span>}
           {isOwn && !isDeleted && (
             <span
@@ -796,6 +856,11 @@ function MessageBubble({
               aria-label={message.isRead ? 'Seen' : 'Sent'}
             >
               {message.isRead ? 'Seen' : 'Sent'}
+            </span>
+          )}
+          {isSaved && !isDeleted && (
+            <span className="message-saved-icon" title="Saved">
+              <BookmarkIcon size={11} strokeWidth={2.2} />
             </span>
           )}
           <span className="message-time">{time}</span>

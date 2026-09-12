@@ -117,7 +117,6 @@ function ProfileModal({ isOpen, onClose }) {
       >
         <div className="modal-header">
           <div className="modal-title-row">
-            <span className="modal-icon-badge">👤</span>
             <h3>Profile Details</h3>
           </div>
           <button

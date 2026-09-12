@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { PinIcon } from '../common/Icons';
+import { PinIcon, ReminderIcon, BellOffIcon } from '../common/Icons';
 
 function ConversationMenu({
   isOpen,
@@ -45,7 +45,7 @@ function ConversationMenu({
           onClose();
         }}
       >
-        <span className="conv-menu-icon">{muted ? '🔔' : '🔕'}</span>
+        <span className="conv-menu-icon">{muted ? <ReminderIcon size={16} /> : <BellOffIcon size={16} />}</span>
         <span>{muted ? 'Unmute notifications' : 'Mute notifications'}</span>
       </button>
 

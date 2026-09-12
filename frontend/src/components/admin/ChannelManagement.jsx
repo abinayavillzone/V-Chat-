@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import AdminConfirmModal from './AdminConfirmModal';
 import ChannelMembersModal from './ChannelMembersModal';
 import { ChannelIcon, LockIcon, SearchIcon } from '../common/Icons';
 import {
@@ -530,7 +529,7 @@ function ChannelManagement() {
           <div className="modal-container admin-edit-modal" onClick={(e) => e.stopPropagation()}>
             <form onSubmit={handleSaveEdit}>
               <div className="modal-header">
-                <h3 className="modal-title">Edit Channel #{editModalState.channel?.name}</h3>
+                <h3 className="modal-title">Edit Channel {editModalState.channel?.name}</h3>
                 <button
                   type="button"
                   className="btn-modal-close"
@@ -604,33 +603,109 @@ function ChannelManagement() {
 
       {/* Archive / Deactivate Channel Confirmation Modal */}
       {archiveModalState.isOpen && (
-        <AdminConfirmModal
-          isOpen={archiveModalState.isOpen}
-          title={archiveModalState.channel?.isArchived ? `Unarchive Channel #${archiveModalState.channel?.name}` : `Archive Channel #${archiveModalState.channel?.name}`}
-          message={
-            archiveModalState.channel?.isArchived
-              ? `Are you sure you want to unarchive "#${archiveModalState.channel?.name}"? Team members will immediately be able to resume messaging and operations in this channel.`
-              : `Are you sure you want to archive "#${archiveModalState.channel?.name}"? New messages and posting operations will be paused, while all existing messages, discussions, and attachments will remain completely preserved and readable.`
-          }
-          confirmText={archiveModalState.channel?.isArchived ? 'Unarchive Channel' : 'Archive Channel'}
-          isDanger={!archiveModalState.channel?.isArchived}
-          loading={archiveModalState.loading}
-          onConfirm={handleArchiveConfirm}
-          onCancel={() => setArchiveModalState({ isOpen: false, channel: null, loading: false })}
-        />
+        <div
+          className="modal-backdrop"
+          onClick={() => setArchiveModalState({ isOpen: false, channel: null, loading: false })}
+        >
+          <div className="modal-container admin-edit-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">
+                {archiveModalState.channel?.isArchived
+                  ? `Unarchive Channel ${archiveModalState.channel?.name}`
+                  : `Archive Channel ${archiveModalState.channel?.name}`}
+              </h3>
+              <button
+                type="button"
+                className="btn-modal-close"
+                onClick={() => setArchiveModalState({ isOpen: false, channel: null, loading: false })}
+                disabled={archiveModalState.loading}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="modal-body">
+              <p style={{ margin: 0, fontSize: '0.92rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>
+                {archiveModalState.channel?.isArchived
+                  ? `Are you sure you want to unarchive "${archiveModalState.channel?.name}"? Team members will immediately be able to resume messaging and operations in this channel.`
+                  : `Are you sure you want to archive "${archiveModalState.channel?.name}"? New messages and posting operations will be paused, while all existing messages, discussions, and attachments will remain completely preserved and readable.`}
+              </p>
+            </div>
+
+            <div className="modal-footer">
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setArchiveModalState({ isOpen: false, channel: null, loading: false })}
+                disabled={archiveModalState.loading}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className={archiveModalState.channel?.isArchived ? 'btn-primary' : 'btn-danger'}
+                onClick={handleArchiveConfirm}
+                disabled={archiveModalState.loading}
+              >
+                {archiveModalState.loading
+                  ? 'Processing...'
+                  : archiveModalState.channel?.isArchived
+                    ? 'Unarchive Channel'
+                    : 'Archive Channel'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Delete Channel Confirmation Modal */}
-      <AdminConfirmModal
-        isOpen={deleteModalState.isOpen}
-        title={`Delete Channel #${deleteModalState.channel?.name}`}
-        message={`Are you sure you want to permanently delete the channel "#${deleteModalState.channel?.name}"? All associated messages and discussion history will be purged immediately.`}
-        confirmText="Delete Channel"
-        isDanger={true}
-        loading={deleteModalState.loading}
-        onConfirm={handleDeleteConfirm}
-        onCancel={() => setDeleteModalState({ isOpen: false, channel: null, loading: false })}
-      />
+      {deleteModalState.isOpen && (
+        <div
+          className="modal-backdrop"
+          onClick={() => setDeleteModalState({ isOpen: false, channel: null, loading: false })}
+        >
+          <div className="modal-container admin-edit-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">
+                Delete Channel {deleteModalState.channel?.name}
+              </h3>
+              <button
+                type="button"
+                className="btn-modal-close"
+                onClick={() => setDeleteModalState({ isOpen: false, channel: null, loading: false })}
+                disabled={deleteModalState.loading}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="modal-body">
+              <p style={{ margin: 0, fontSize: '0.92rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>
+                Are you sure you want to permanently delete the channel &quot;{deleteModalState.channel?.name}&quot;? All associated messages and discussion history will be purged immediately.
+              </p>
+            </div>
+
+            <div className="modal-footer">
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setDeleteModalState({ isOpen: false, channel: null, loading: false })}
+                disabled={deleteModalState.loading}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn-danger"
+                onClick={handleDeleteConfirm}
+                disabled={deleteModalState.loading}
+              >
+                {deleteModalState.loading ? 'Deleting...' : 'Delete Channel'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

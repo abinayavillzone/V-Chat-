@@ -1,5 +1,6 @@
 import ChatListItem from './ChatListItem';
-import { PinIcon } from '../common/Icons';
+import { PinIcon, SearchIcon } from '../common/Icons';
+import NotificationBell from '../notifications/NotificationBell';
 
 function ChatList({
   chats = [],
@@ -12,11 +13,13 @@ function ChatList({
   onSelectChat,
   onSelectChannel,
   searchQuery = '',
+  onSearchChange,
   loading = false,
   pinnedChatIds = [],
   pinnedChannelIds = [],
   onPinItem = null,
   onUnpinItem = null,
+  onSelectNotification = null,
 }) {
   // Combine direct conversations and joined channels into a single unified list
   const rawList = items || [
@@ -166,7 +169,31 @@ function ChatList({
   return (
     <div className="chat-list-container">
       <div className="section-sub-header">
-        <span className="section-sub-title">Chats</span>
+        <span className="section-sub-title">CHATS</span>
+        <NotificationBell onSelectNotification={onSelectNotification} />
+      </div>
+
+      <div className="sidebar-search-container">
+        <div className="sidebar-search-wrapper">
+          <SearchIcon size={14} className="sidebar-search-icon" />
+          <input
+            type="text"
+            className="sidebar-search-input"
+            placeholder="Search chats..."
+            value={searchQuery}
+            onChange={(e) => onSearchChange?.(e.target.value)}
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              className="sidebar-search-clear-btn"
+              onClick={() => onSearchChange?.('')}
+              aria-label="Clear search"
+            >
+              ✕
+            </button>
+          )}
+        </div>
       </div>
 
       {loading ? (

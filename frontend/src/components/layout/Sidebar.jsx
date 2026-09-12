@@ -8,6 +8,8 @@ import {
   ChatIcon,
   ChannelIcon,
   TodoIcon,
+  ReminderIcon,
+  NoteIcon,
   BookmarkIcon,
   ContactsIcon,
   CompanyIcon,
@@ -15,6 +17,16 @@ import {
   LogoutIcon,
   MoreVerticalIcon,
 } from '../common/Icons';
+
+// Google Calendar inline SVG icon
+const CalendarIcon = ({ size = 18 }) => (
+  <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+    <line x1="16" y1="2" x2="16" y2="6" />
+    <line x1="8" y1="2" x2="8" y2="6" />
+    <line x1="3" y1="10" x2="21" y2="10" />
+  </svg>
+);
 
 function Sidebar({
   activeTab,
@@ -24,6 +36,7 @@ function Sidebar({
   onOpenProfileModal,
   onOpenCompanyModal,
   onOpenSettingsModal,
+  calendarConnected,
 }) {
   const { user, logout } = useAuth();
   const userName = user?.name || 'Teammate';
@@ -168,6 +181,53 @@ function Sidebar({
 
           <button
             type="button"
+            className={`nav-tab-btn ${activeTab === 'reminders' ? 'active' : ''}`}
+            onClick={() => {
+              onSelectTab('reminders');
+              onCloseMobile?.();
+            }}
+            aria-label="Reminders section"
+          >
+            <span className="nav-icon">
+              <ReminderIcon size={18} />
+            </span>
+            <span className="nav-label">Reminders</span>
+          </button>
+
+          <button
+            type="button"
+            className={`nav-tab-btn ${activeTab === 'notes' ? 'active' : ''}`}
+            onClick={() => {
+              onSelectTab('notes');
+              onCloseMobile?.();
+            }}
+            aria-label="Private Notes section"
+          >
+            <span className="nav-icon">
+              <NoteIcon size={18} />
+            </span>
+            <span className="nav-label">Private Notes</span>
+          </button>
+
+          <button
+            type="button"
+            className={`nav-tab-btn nav-gcal-btn ${activeTab === 'calendar' ? 'active' : ''}`}
+            onClick={() => {
+              onSelectTab('calendar');
+              onCloseMobile?.();
+            }}
+            aria-label="Google Calendar"
+            title="Google Calendar"
+          >
+            <span className="nav-icon">
+              <CalendarIcon size={18} />
+            </span>
+            <span className="nav-label">Google Calendar</span>
+            {calendarConnected && <span className="gcal-connected-dot" aria-label="Connected" />}
+          </button>
+
+          <button
+            type="button"
             className={`nav-tab-btn ${activeTab === 'saved' ? 'active' : ''}`}
             onClick={() => {
               onSelectTab('saved');
@@ -234,19 +294,6 @@ function Sidebar({
             <span className="nav-label">Profile Details</span>
           </button>
 
-          <button
-            type="button"
-            className="nav-tab-btn"
-            onClick={() => {
-              onCloseMobile?.();
-              onOpenCompanyModal?.();
-            }}
-          >
-            <span className="nav-icon">
-              <CompanyIcon size={18} />
-            </span>
-            <span className="nav-label">Workspace / Company</span>
-          </button>
 
           <button
             type="button"

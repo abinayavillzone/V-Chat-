@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SocketProvider, useSocket } from './context/SocketContext';
+import { CallProvider } from './context/CallContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { SettingsProvider } from './context/SettingsContext';
 import AppLayout from './components/layout/AppLayout';
@@ -608,11 +609,13 @@ function MainApp() {
     // Active Organization — Render Full Workspace
     return (
       <SocketProvider>
-        <NotificationProvider>
-          <SettingsProvider>
-            <AppLayout />
-          </SettingsProvider>
-        </NotificationProvider>
+        <CallProvider>
+          <NotificationProvider>
+            <SettingsProvider>
+              <AppLayout />
+            </SettingsProvider>
+          </NotificationProvider>
+        </CallProvider>
       </SocketProvider>
     );
   }

@@ -54,7 +54,8 @@ function CreateCompanyPage({ onBack, onSuccess }) {
           return;
         }
 
-        const res = await fetch('http://localhost:5000/api/organizations/register-company', {
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+        const res = await fetch(`${backendUrl}/api/organizations/register-company`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

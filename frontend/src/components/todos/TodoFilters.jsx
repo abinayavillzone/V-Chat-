@@ -20,7 +20,6 @@ function TodoFilters({
           onClick={() => onViewChange('all')}
         >
           <span>All</span>
-          <span className="todo-count-badge">{allCount}</span>
         </button>
 
         <button
@@ -29,7 +28,6 @@ function TodoFilters({
           onClick={() => onViewChange('my')}
         >
           <span>My To-Dos</span>
-          <span className="todo-count-badge">{myCount}</span>
         </button>
       </div>
 

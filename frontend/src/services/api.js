@@ -1,10 +1,9 @@
 import axios from 'axios';
 
 // Create a configured Axios instance
-// In development, Vite proxy forwards /api to http://127.0.0.1:5000/api
-// Can also be overridden via VITE_API_URL in environment if needed
+// Uses live Railway API by default or overridden via VITE_API_URL
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/api',
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
   timeout: 15000,
   headers: {
     'Content-Type': 'application/json',

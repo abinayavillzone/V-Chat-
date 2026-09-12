@@ -18,6 +18,7 @@ function AdminDashboard({ onBackToWorkspace }) {
   const [statsError, setStatsError] = useState(null);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
+
   const isAdmin = ['owner', 'admin'].includes(user?.role);
 
   const loadStats = useCallback(async () => {
@@ -73,6 +74,7 @@ function AdminDashboard({ onBackToWorkspace }) {
           aria-hidden="true"
         />
       )}
+
 
       {/* Admin Sidebar Navigation */}
       <AdminSidebar

@@ -58,6 +58,7 @@ function ChannelWindow({
   isExpired = false,
   isSuspended = false,
   onPollVoted = null,
+  onPromoteAdmin = null,
 }) {
   const [showMembers, setShowMembers] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
@@ -103,10 +104,21 @@ function ChannelWindow({
     (m) => (m._id || m.id || m)?.toString() === currentUserId?.toString()
   );
 
-  // Check if user has permission to manage channel (creator or admin)
-  const canManage =
-    (channel.createdBy?._id || channel.createdBy?.id || channel.createdBy)?.toString() ===
-      currentUserId?.toString() || userRole === 'admin';
+  // Check if current user is a Channel Admin (in channel.admins array, or creator, or org admin)
+  const isChannelAdmin = Boolean(
+    channel.admins?.some(
+      (adm) => (adm._id || adm.id || adm)?.toString() === currentUserId?.toString()
+    ) ||
+      (channel.createdBy?._id || channel.createdBy?.id || channel.createdBy)?.toString() ===
+        currentUserId?.toString() ||
+      userRole === 'admin'
+  );
+
+  // Check if user has permission to manage channel
+  const canManage = isChannelAdmin;
+
+  // Check if user can send messages (must be a member and, if admin-only channel, must be channel admin)
+  const canSendMessages = isMember && (!channel.isAdminOnly || isChannelAdmin);
 
   const memberList = Array.isArray(channel.members) ? channel.members : [];
 
@@ -183,36 +195,14 @@ function ChannelWindow({
                 {channel.isPrivate ? <LockIcon size={18} /> : <ChannelIcon size={18} />}
               </div>
 
-              <div className="chat-header-info">
+              <div 
+                className="chat-header-info" 
+                onClick={() => setShowMembers((prev) => !prev)}
+                style={{ cursor: 'pointer' }}
+                title="View channel members"
+              >
                 <div className="channel-title-row">
                   <h3 className="chat-header-name">{channel.name}</h3>
-                  {channel.isPrivate && (
-                    <span className="private-badge">
-                      <svg
-                        viewBox="0 0 24 24"
-                        width="11"
-                        height="11"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2.4"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        style={{ marginRight: 4 }}
-                      >
-                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                      </svg>
-                      Private
-                    </span>
-                  )}
-                  <button
-                    type="button"
-                    className="btn-channel-members-pill"
-                    onClick={() => setShowMembers((prev) => !prev)}
-                    title="View channel members"
-                  >
-                    👥 {memberList.length}
-                  </button>
                 </div>
                 <span className="chat-header-status">
                   {channel.description || 'General team discussion'}
@@ -243,7 +233,7 @@ function ChannelWindow({
                   aria-label={`Invite teammates to #${channel.name}`}
                   onClick={() => setIsAddMembersOpen(true)}
                 >
-                  <span>👤+ Add Member</span>
+                  <span>Add Member</span>
                 </button>
               )}
 
@@ -308,7 +298,7 @@ function ChannelWindow({
                         : null
                     }
                     onEditChannel={
-                      (channel.createdBy?._id || channel.createdBy?.id || channel.createdBy)?.toString() === currentUserId?.toString() || userRole === 'admin'
+                      canManage
                         ? () => setIsEditModalOpen(true)
                         : null
                     }
@@ -326,9 +316,9 @@ function ChannelWindow({
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
         channel={channel}
-        onSave={async ({ name, description }) => {
+        onSave={async ({ name, description, isAdminOnly }) => {
           if (onUpdateChannel) {
-            await onUpdateChannel(channelId, { name, description });
+            await onUpdateChannel(channelId, { name, description, isAdminOnly });
           }
         }}
       />
@@ -446,10 +436,11 @@ function ChannelWindow({
                 currentUserId={currentUserId}
                 loading={loading}
                 highlightedMessageId={activeHighlightId}
+                replyingToId={(replyingTo?._id || replyingTo?.id)?.toString() || null}
                 hasMore={hasMore}
                 loadingOlder={loadingOlder}
                 onLoadOlder={onLoadOlder}
-                onReply={(msg) => setReplyingTo(msg)}
+                onReply={channel.isArchived ? null : (isMember ? (msg) => setReplyingTo(msg) : null)}
                 onForward={(msg) => setForwardingMessage(msg)}
                 onEdit={onEditMessage}
                 onDelete={onDeleteMessage}
@@ -484,6 +475,11 @@ function ChannelWindow({
                   <span className="archived-icon">📦</span>
                   <span>This channel is archived. New messages cannot be sent.</span>
                 </div>
+              ) : channel.isAdminOnly && !canSendMessages && !replyingTo ? (
+                <div className="admin-only-channel-banner">
+                  <span className="admin-only-icon">🔒</span>
+                  <span>Only Channel Admins can post messages in this channel.</span>
+                </div>
               ) : isPlanDisabled ? (
                 <div className="plan-disabled-input-bar">
                   <span className="plan-disabled-text">
@@ -495,18 +491,18 @@ function ChannelWindow({
                   onSendMessage={handleSendMessageWithReply}
                   onTyping={onTyping}
                   onStopTyping={onStopTyping}
-                  placeholder={`Message ${channel.name}...`}
+                  placeholder={replyingTo ? `Reply in ${channel.name}...` : `Message ${channel.name}...`}
                   disabled={isSending}
                   replyingTo={replyingTo}
                   onCancelReply={() => setReplyingTo(null)}
                   members={channel?.members || []}
-                  onCreatePoll={(pollData) => {
+                  onCreatePoll={canSendMessages ? (pollData) => {
                     onSendMessage({
                       content: `📊 Poll: ${pollData.question}`,
                       poll: pollData,
                       messageType: 'poll',
                     });
-                  }}
+                  } : null}
                 />
               )}
             </>
@@ -539,6 +535,7 @@ function ChannelWindow({
           canManage={canManage}
           onClose={() => setShowMembers(false)}
           onOpenAddMembers={() => setIsAddMembersOpen(true)}
+          onPromoteAdmin={onPromoteAdmin}
         />
       </div>
 

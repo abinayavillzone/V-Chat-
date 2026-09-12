@@ -58,9 +58,8 @@ function AdminHeader({ activeTab, user, onLogout, onBackToWorkspace, onToggleMob
           <ChatIcon size={14} style={{ marginRight: 6 }} /> Switch to Chat
         </button>
 
-        <div className="header-user-pill">
+        <div className="header-user-pill" title="Profile" aria-label="Profile">
           <Avatar name={user?.name || 'Admin'} size="small" />
-          <span className="header-user-name">{user?.name || 'Admin'}</span>
         </div>
 
         <button

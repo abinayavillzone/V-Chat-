@@ -12,6 +12,7 @@ function TodoItem({
   onNavigateToConversation,
   onNavigateToChannel,
   onNavigateToMessage,
+  onAddToCalendar,
 }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
@@ -242,6 +243,18 @@ function TodoItem({
                 <span>Delete To-Do</span>
               </button>
             )}
+
+            <button
+              type="button"
+              className="todo-menu-item"
+              onClick={() => {
+                setIsMenuOpen(false);
+                onAddToCalendar?.(todo);
+              }}
+            >
+              <span className="menu-icon">📅</span>
+              <span>Add to Calendar</span>
+            </button>
           </div>
         )}
 

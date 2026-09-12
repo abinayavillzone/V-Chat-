@@ -8,7 +8,8 @@ import MessageInfoModal from './MessageInfoModal';
 import PinnedMessagesPanel from './PinnedMessagesPanel';
 import ConversationMenu from './ConversationMenu';
 import PollModal from './PollModal';
-import { PinIcon } from '../common/Icons';
+import { PinIcon, AudioCallIcon, VideoCallIcon, SearchIcon, MoreVerticalIcon } from '../common/Icons';
+import { useCall } from '../../context/CallContext';
 
 function ChatWindow({
   chat,
@@ -60,6 +61,8 @@ function ChatWindow({
   const [showConversationMenu, setShowConversationMenu] = useState(false);
   const [activePollModalMessage, setActivePollModalMessage] = useState(null);
 
+  const { initiateCall } = useCall();
+  
   const convId = (chat._id || chat.id)?.toString();
 
   // Reset states when switching conversations
@@ -86,16 +89,17 @@ function ChatWindow({
     }
   }, [messages, activePollModalMessage]);
 
-  // Extract participant display info
   let displayName = chat.name;
   let displayAvatar = chat.avatar;
   let statusText = 'Direct Message';
   let isOnline = isOtherUserOnline;
+  let otherUserForCall = null;
 
   if (chat.participants && Array.isArray(chat.participants)) {
     const otherUser = chat.participants.find(
       (p) => (p._id || p.id || p)?.toString() !== currentUserId?.toString()
     ) || chat.participants[0];
+    otherUserForCall = otherUser;
 
     displayName = otherUser?.name || 'Teammate';
     displayAvatar = otherUser?.avatar;
@@ -106,7 +110,14 @@ function ChatWindow({
     if (isOnline && allowsOnline) {
       statusText = 'Online';
     } else if (otherUserLastSeen && allowsLastSeen) {
-      statusText = 'Recently Seen';
+      const date = new Date(otherUserLastSeen);
+      const formattedDate = date.toLocaleString(undefined, {
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit'
+      });
+      statusText = `Last seen at ${formattedDate}`;
     } else {
       statusText = 'Offline';
     }
@@ -179,6 +190,28 @@ function ChatWindow({
             </div>
 
             <div className="chat-header-actions">
+              {otherUserForCall && !chat.isMe && (
+                <>
+                  <button
+                    type="button"
+                    className="btn-icon-action"
+                    title="Audio Call"
+                    aria-label="Audio Call"
+                    onClick={() => initiateCall(otherUserForCall, 'audio', chat._id)}
+                  >
+                    <AudioCallIcon size={18} />
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-icon-action"
+                    title="Video Call"
+                    aria-label="Video Call"
+                    onClick={() => initiateCall(otherUserForCall, 'video', chat._id)}
+                  >
+                    <VideoCallIcon size={18} />
+                  </button>
+                </>
+              )}
               {onCreateTodo && !isPlanDisabled && (
                 <button
                   type="button"
@@ -191,39 +224,34 @@ function ChatWindow({
                 </button>
               )}
 
-              <div className="header-actions-group">
+              <button
+                type="button"
+                className="btn-icon-action"
+                title="Search in conversation"
+                aria-label="Search in conversation"
+                onClick={() => setIsSearchOpen(true)}
+              >
+                <SearchIcon size={18} strokeWidth={2} />
+              </button>
+
+              <div className="header-menu-container">
                 <button
                   type="button"
                   className="btn-icon-action"
-                  title="Search in conversation"
-                  aria-label="Search in conversation"
-                  onClick={() => setIsSearchOpen(true)}
+                  title="More options"
+                  aria-label="More options"
+                  onClick={() => setShowConversationMenu((prev) => !prev)}
                 >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="11" cy="11" r="8" />
-                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                  </svg>
+                  <MoreVerticalIcon size={18} strokeWidth={2} />
                 </button>
-
-                <div className="header-menu-container">
-                  <button
-                    type="button"
-                    className="btn-icon-action"
-                    title="Conversation options"
-                    aria-label="Conversation options"
-                    onClick={() => setShowConversationMenu((prev) => !prev)}
-                  >
-                    ⋮
-                  </button>
-                  <ConversationMenu
-                    isOpen={showConversationMenu}
-                    onClose={() => setShowConversationMenu(false)}
-                    muted={muted}
-                    onToggleMute={onToggleMute}
-                    onOpenPinned={() => setShowPinned(true)}
-                    label={displayName}
-                  />
-                </div>
+                <ConversationMenu
+                  isOpen={showConversationMenu}
+                  onClose={() => setShowConversationMenu(false)}
+                  muted={muted}
+                  onToggleMute={onToggleMute}
+                  onOpenPinned={() => setShowPinned(true)}
+                  label={displayName}
+                />
               </div>
             </div>
           </>
@@ -238,15 +266,14 @@ function ChatWindow({
         const pinSnippet = pinDoc?.deleted
           ? 'This message was deleted'
           : (pinDoc?.content || (pinDoc?.attachments?.length ? `📎 ${pinDoc.attachments[0].fileName}` : 'Pinned message'));
-        const targetId = (pinDoc?._id || pinDoc?.id || latestPin?.messageId)?.toString();
 
         return (
           <div
             className="chat-pinned-message-top-bar"
-            onClick={() => targetId && handleSelectMessageFromSearch(targetId)}
+            onClick={() => setShowPinned(true)}
             role="button"
             tabIndex={0}
-            title="Click to jump to pinned message"
+            title="View pinned messages"
           >
             <div className="pinned-bar-left">
               <span className="pinned-bar-icon">
@@ -254,42 +281,11 @@ function ChatWindow({
               </span>
               <div className="pinned-bar-text-group">
                 <div className="pinned-bar-header-row">
-                  <span className="pinned-bar-title">
-                    Pinned Message{pinnedMessages.length > 1 ? ` (${pinnedMessages.length})` : ''}
-                  </span>
+                  <span className="pinned-bar-title">Pinned Message</span>
                   <span className="pinned-bar-sender">· {pinSender}</span>
                 </div>
                 <p className="pinned-bar-snippet">{pinSnippet}</p>
               </div>
-            </div>
-            <div className="pinned-bar-right-actions">
-              {pinnedMessages.length > 1 && (
-                <button
-                  type="button"
-                  className="btn-pinned-bar-all"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowPinned(true);
-                  }}
-                  title="View all pinned messages"
-                >
-                  All ({pinnedMessages.length})
-                </button>
-              )}
-              {onUnpin && (
-                <button
-                  type="button"
-                  className="btn-pinned-bar-unpin"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (targetId) onUnpin(targetId);
-                  }}
-                  title="Unpin message"
-                  aria-label="Unpin message"
-                >
-                  <PinIcon size={13} strokeWidth={2.2} />
-                </button>
-              )}
             </div>
           </div>
         );
@@ -301,6 +297,7 @@ function ChatWindow({
         currentUserId={currentUserId}
         loading={loading}
         highlightedMessageId={activeHighlightId}
+        replyingToId={(replyingTo?._id || replyingTo?.id)?.toString() || null}
         hasMore={hasMore}
         loadingOlder={loadingOlder}
         onLoadOlder={onLoadOlder}

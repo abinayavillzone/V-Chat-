@@ -17,6 +17,7 @@ function TodoList({
   onNavigateToChannel,
   onNavigateToMessage,
   onOpenCreateModal,
+  onAddToCalendar,
 }) {
   const [isCompletedExpanded, setIsCompletedExpanded] = useState(true);
 
@@ -87,6 +88,7 @@ function TodoList({
                 onNavigateToConversation={onNavigateToConversation}
                 onNavigateToChannel={onNavigateToChannel}
                 onNavigateToMessage={onNavigateToMessage}
+                onAddToCalendar={onAddToCalendar}
               />
             ))}
           </div>
@@ -125,6 +127,7 @@ function TodoList({
                   onNavigateToConversation={onNavigateToConversation}
                   onNavigateToChannel={onNavigateToChannel}
                   onNavigateToMessage={onNavigateToMessage}
+                  onAddToCalendar={onAddToCalendar}
                 />
               ))}
             </div>

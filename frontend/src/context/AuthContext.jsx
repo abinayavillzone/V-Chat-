@@ -15,7 +15,7 @@ export const AuthProvider = ({ children }) => {
       return err.response.data.message;
     }
     if (err.code === 'ERR_NETWORK' || !err.response) {
-      return 'Unable to reach backend server. Please make sure the backend is running on port 5000.';
+      return 'Unable to reach backend server. Please verify your network connection and server status.';
     }
     return err.message || fallback;
   };

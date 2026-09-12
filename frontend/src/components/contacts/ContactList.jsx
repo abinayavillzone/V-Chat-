@@ -19,7 +19,6 @@ function ContactList({
     <div className="contact-list-container">
       <div className="section-sub-header">
         <span className="section-sub-title">Team Members</span>
-        <span className="count-pill">{filteredContacts.length}</span>
       </div>
 
       {loading ? (

@@ -6,6 +6,7 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const connectDB = require('./config/db');
 const { initSocket } = require('./services/socketService');
+const { initReminderScheduler } = require('./services/reminderScheduler');
 
 // Load environment variables from .env file
 dotenv.config();
@@ -32,6 +33,9 @@ const io = new Server(server, {
 
 // Initialize Socket.IO event architecture and middlewares
 initSocket(io);
+
+// Initialize server-side Reminder scheduler
+initReminderScheduler(io);
 
 // Store io reference on app for controller access
 app.set('io', io);
@@ -71,8 +75,11 @@ app.use('/api/search', require('./routes/searchRoutes'));
 app.use('/api/admin', require('./routes/adminRoutes'));
 app.use('/api/organizations', require('./routes/organizationRoutes'));
 app.use('/api/todos', require('./routes/todoRoutes'));
+app.use('/api/reminders', require('./routes/reminderRoutes'));
+app.use('/api/notes', require('./routes/noteRoutes'));
 app.use('/api/super-admin', require('./routes/superAdminRoutes'));
 app.use('/api/invitations', require('./routes/invitationRoutes'));
+app.use('/api/google', require('./routes/googleCalendarRoutes'));
 
 // Configure Port
 const PORT = process.env.PORT || 5000;

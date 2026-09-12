@@ -201,7 +201,14 @@ function MessageInput({
 
     const rawText = el.innerText || '';
     const trimmedPlain = rawText.replace(/\n$/, '');
-    const currentlyEmpty = trimmedPlain.trim().length === 0;
+    const textOnly = el.textContent ? el.textContent.replace(/[\n\r\s]/g, '') : '';
+    const hasNoMedia = !el.querySelector('img, video, iframe, object, embed');
+    const currentlyEmpty = textOnly === '' && hasNoMedia;
+
+    if (currentlyEmpty && el.innerHTML !== '') {
+      el.innerHTML = '';
+    }
+
     setIsEmpty(currentlyEmpty);
 
     const markdown = domToMarkdown(el);
@@ -475,6 +482,12 @@ function MessageInput({
     };
   }, []);
 
+  useEffect(() => {
+    if (replyingTo && editorRef.current) {
+      editorRef.current.focus();
+    }
+  }, [replyingTo]);
+
   const canSubmit = (!isEmpty || selectedFiles.length > 0) && !disabled;
 
   const replySenderName =
@@ -704,7 +717,10 @@ function MessageInput({
             data-empty={isEmpty ? 'true' : 'false'}
             onInput={handleInput}
             onKeyDown={handleKeyDown}
-            onKeyUp={updateActiveFormats}
+            onKeyUp={(e) => {
+              handleInput();
+              updateActiveFormats();
+            }}
             onMouseUp={updateActiveFormats}
             onPaste={handlePaste}
             role="textbox"

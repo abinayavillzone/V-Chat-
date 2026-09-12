@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
 import Sidebar from './Sidebar';
@@ -13,7 +13,12 @@ import EmptyState from '../common/EmptyState';
 import AdminDashboard from '../../pages/AdminDashboard';
 import TodoPage from '../todos/TodoPage';
 import TodoModal from '../todos/TodoModal';
+import ReminderPage from '../reminders/ReminderPage';
+import DueReminderModal from '../reminders/DueReminderModal';
+import NotesPage from '../notes/NotesPage';
 import SavedMessagesPage from '../saved/SavedMessagesPage';
+import GoogleCalendarPanel from '../calendar/GoogleCalendarPanel';
+import { getGoogleCalendarStatus } from '../../services/googleCalendarService';
 import JoinRequestAcceptModal from '../common/JoinRequestAcceptModal';
 import InvitationAcceptModal from '../common/InvitationAcceptModal';
 import ProfileModal from '../common/ProfileModal';
@@ -21,6 +26,7 @@ import SettingsModal from '../common/SettingsModal';
 import CompanyModal from '../organization/CompanyModal';
 import MobileBottomNav from './MobileBottomNav';
 import { SuspensionBanner } from '../common/OrgStatusBadge';
+import CallOverlay from '../calling/CallOverlay';
 
 import {
   getConversations,
@@ -46,6 +52,7 @@ import {
   getChannels,
   createChannel,
   updateChannel,
+  promoteChannelAdmin,
   joinChannel,
   leaveChannel,
   addChannelMembers,
@@ -131,13 +138,16 @@ function AppLayout() {
   } = useSocket();
 
   // Navigation and Workspace States
-  const [activeTab, setActiveTab] = useState('chats'); // 'chats' | 'channels' | 'contacts'
+  const [activeTab, setActiveTab] = useState('chats'); // 'chats' | 'channels' | 'contacts' | 'calendar'
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
   const [searchQuery, setSearchQuery] = useState('');
-  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isCreateChannelOpen, setIsCreateChannelOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isCompanyModalOpen, setIsCompanyModalOpen] = useState(false);
+  const [calendarConnected, setCalendarConnected] = useState(false);
+  const [calendarPrefill, setCalendarPrefill] = useState(null);
 
   // Live Database States
   const [conversations, setConversations] = useState([]);
@@ -165,6 +175,60 @@ function AppLayout() {
     }
   }, [user?.pinnedChats, user?.pinnedChannels]);
 
+  // Check Google Calendar connection status on mount
+  useEffect(() => {
+    const checkCalendarStatus = async () => {
+      try {
+        const data = await getGoogleCalendarStatus();
+        setCalendarConnected(Boolean(data?.connected));
+      } catch {
+        // Silently fail - calendar status is non-critical
+      }
+    };
+    checkCalendarStatus();
+
+    // Handle the OAuth redirect callback: ?google_calendar=connected
+    const params = new URLSearchParams(window.location.search);
+    const gcParam = params.get('google_calendar');
+    if (gcParam) {
+      // Clean the URL without a full reload
+      window.history.replaceState({}, document.title, window.location.pathname);
+      if (gcParam === 'connected') {
+        // Refresh status and switch to calendar tab
+        checkCalendarStatus().then(() => setActiveTab('calendar'));
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Handle "Add to Calendar" from TodoItem or other sources
+  const handleAddToCalendar = (todo) => {
+    // Pre-fill the Create Event form using todo fields
+    const toLocalInput = (date) => {
+      if (!date) return '';
+      const d = new Date(date);
+      const pad = (n) => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    };
+    const toLocalDate = (date) => {
+      if (!date) return '';
+      const d = new Date(date);
+      const pad = (n) => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    };
+    const prefill = {
+      summary: todo.title || '',
+      description: todo.description || '',
+      allDay: Boolean(todo.dueDate && !todo.dueTime),
+      startDate: todo.dueDate ? toLocalDate(new Date(todo.dueDate)) : toLocalDate(new Date()),
+      endDate: todo.dueDate ? toLocalDate(new Date(todo.dueDate)) : toLocalDate(new Date()),
+      start: todo.dueDate ? toLocalInput(new Date(todo.dueDate)) : '',
+      end: todo.dueDate ? toLocalInput(new Date(new Date(todo.dueDate).getTime() + 3600000)) : '',
+    };
+    setCalendarPrefill(prefill);
+    setActiveTab('calendar');
+  };
+
   // Level 9: Advanced Search & Pagination States
   const [highlightedMessageId, setHighlightedMessageId] = useState(null);
   const [hasMoreMap, setHasMoreMap] = useState({}); // { [id]: boolean }
@@ -181,11 +245,28 @@ function AppLayout() {
     orgId: null,
   });
 
-  // Level 16: Organization Invitation Modal State
+  // Organization Invitation Modal State
   const [invitationModal, setInvitationModal] = useState({
     isOpen: false,
     invitation: null,
   });
+
+  // Due Reminder Notification Popup State
+  const [dueReminder, setDueReminder] = useState(null);
+
+  // Listen for real-time reminder:due events
+  useEffect(() => {
+    if (!socket) return;
+    const handleReminderDue = (data) => {
+      if (data?.reminder) {
+        setDueReminder(data.reminder);
+      }
+    };
+    socket.on('reminder:due', handleReminderDue);
+    return () => {
+      socket.off('reminder:due', handleReminderDue);
+    };
+  }, [socket]);
 
 
   // Loading & Error States
@@ -400,6 +481,22 @@ function AppLayout() {
     }
   }, [activeTab, selectedChannel, joinChannelRoom, leaveChannelRoom]);
 
+  const selectedChatRef = useRef(selectedChat);
+  const selectedChannelRef = useRef(selectedChannel);
+  const activeTabRef = useRef(activeTab);
+
+  useEffect(() => {
+    selectedChatRef.current = selectedChat;
+  }, [selectedChat]);
+
+  useEffect(() => {
+    selectedChannelRef.current = selectedChannel;
+  }, [selectedChannel]);
+
+  useEffect(() => {
+    activeTabRef.current = activeTab;
+  }, [activeTab]);
+
   // 6. Listen for Direct and Channel Real-Time Socket Events
   useEffect(() => {
     if (!socket) return;
@@ -421,32 +518,34 @@ function AppLayout() {
       });
 
       setConversations((prev) => {
-        const activeConvId = (selectedChat?._id || selectedChat?.id)?.toString();
+        const activeConvId = (selectedChatRef.current?._id || selectedChatRef.current?.id)?.toString();
         const isDocumentVisibleAndFocused = typeof document !== 'undefined' && !document.hidden && document.hasFocus();
-        const isCurrentActiveChat = activeTab === 'chats' && activeConvId === convId && isDocumentVisibleAndFocused;
+        const isCurrentActiveChat = activeTabRef.current === 'chats' && activeConvId === convId && isDocumentVisibleAndFocused;
         const existingConv = prev.find((c) => (c._id || c.id)?.toString() === convId);
-        const unreadCount = isCurrentActiveChat || isFromSelf ? 0 : (existingConv?.unread || 0) + 1;
 
         const isSelfMsg =
-          isFromSelf &&
-          (message.receiver?._id || message.receiver?.id || message.receiver)?.toString() === currentUserId;
+          (isFromSelf &&
+            (message.receiver?._id || message.receiver?.id || message.receiver)?.toString() === currentUserId) ||
+          (existingConv && (existingConv.isMe || (Array.isArray(existingConv.participants) && existingConv.participants.length === 1)));
+
+        const unreadCount = isCurrentActiveChat || isFromSelf || isSelfMsg ? 0 : (existingConv?.unread || 0) + 1;
 
         const updatedConv = existingConv
           ? {
-              ...existingConv,
-              lastMessage: message,
-              lastMessageAt: message.createdAt,
-              unread: unreadCount,
-              ...(isSelfMsg || existingConv.isMe ? { isMe: true } : {}),
-            }
+            ...existingConv,
+            lastMessage: message,
+            lastMessageAt: message.createdAt,
+            unread: isSelfMsg ? 0 : unreadCount,
+            ...(isSelfMsg || existingConv.isMe ? { isMe: true } : {}),
+          }
           : {
-              _id: convId,
-              participants: isSelfMsg ? [message.sender] : [message.sender, message.receiver],
-              lastMessage: message,
-              lastMessageAt: message.createdAt,
-              unread: unreadCount,
-              ...(isSelfMsg ? { isMe: true } : {}),
-            };
+            _id: convId,
+            participants: isSelfMsg ? [message.sender] : [message.sender, message.receiver],
+            lastMessage: message,
+            lastMessageAt: message.createdAt,
+            unread: isSelfMsg ? 0 : unreadCount,
+            ...(isSelfMsg ? { isMe: true } : {}),
+          };
 
         const others = prev.filter((c) => (c._id || c.id)?.toString() !== convId);
         return deduplicateConversations([updatedConv, ...others], currentUserId);
@@ -454,8 +553,8 @@ function AppLayout() {
 
       // Only mark as read if the recipient currently has this conversation open, visible, and focused
       const isDocVisibleAndFocused = typeof document !== 'undefined' && !document.hidden && document.hasFocus();
-      const activeConvId = (selectedChat?._id || selectedChat?.id)?.toString();
-      if (activeTab === 'chats' && activeConvId === convId && !isFromSelf && isDocVisibleAndFocused) {
+      const activeConvId = (selectedChatRef.current?._id || selectedChatRef.current?.id)?.toString();
+      if (activeTabRef.current === 'chats' && activeConvId === convId && !isFromSelf && isDocVisibleAndFocused) {
         const msgId = message._id || message.id;
         if (msgId) {
           markMessagesAsRead([msgId]).catch((err) =>
@@ -489,9 +588,9 @@ function AppLayout() {
       });
 
       setChannels((prev) => {
-        const activeChId = (selectedChannel?._id || selectedChannel?.id)?.toString();
+        const activeChId = (selectedChannelRef.current?._id || selectedChannelRef.current?.id)?.toString();
         const isDocumentVisibleAndFocused = typeof document !== 'undefined' && !document.hidden && document.hasFocus();
-        const isCurrentActiveChannel = activeTab === 'channels' && activeChId === chId && isDocumentVisibleAndFocused;
+        const isCurrentActiveChannel = activeTabRef.current === 'channels' && activeChId === chId && isDocumentVisibleAndFocused;
         const existingCh = prev.find((c) => (c._id || c.id)?.toString() === chId);
         const unreadCount = isCurrentActiveChannel || isFromSelf ? 0 : (existingCh?.unread || 0) + 1;
 
@@ -505,8 +604,8 @@ function AppLayout() {
 
       // Only mark as read if the recipient currently has this channel open, visible, and focused
       const isDocVisibleAndFocused = typeof document !== 'undefined' && !document.hidden && document.hasFocus();
-      const activeChId = (selectedChannel?._id || selectedChannel?.id)?.toString();
-      if (activeTab === 'channels' && activeChId === chId && !isFromSelf && isDocVisibleAndFocused) {
+      const activeChId = (selectedChannelRef.current?._id || selectedChannelRef.current?.id)?.toString();
+      if (activeTabRef.current === 'channels' && activeChId === chId && !isFromSelf && isDocVisibleAndFocused) {
         const msgId = message._id || message.id;
         if (msgId) {
           markMessagesAsRead([msgId]).catch((err) =>
@@ -699,14 +798,14 @@ function AppLayout() {
             [convId]: list.map((m) =>
               (m._id || m.id)?.toString() === msgId
                 ? {
-                    ...m,
-                    ...(payload.message || {}),
-                    deleted: true,
-                    deletedAt: payload.deletedAt,
-                    deletedBy: payload.deletedBy,
-                    content: 'This message was deleted',
-                    attachments: [],
-                  }
+                  ...m,
+                  ...(payload.message || {}),
+                  deleted: true,
+                  deletedAt: payload.deletedAt,
+                  deletedBy: payload.deletedBy,
+                  content: 'This message was deleted',
+                  attachments: [],
+                }
                 : m
             ),
           };
@@ -723,14 +822,14 @@ function AppLayout() {
             [chId]: list.map((m) =>
               (m._id || m.id)?.toString() === msgId
                 ? {
-                    ...m,
-                    ...(payload.message || {}),
-                    deleted: true,
-                    deletedAt: payload.deletedAt,
-                    deletedBy: payload.deletedBy,
-                    content: 'This message was deleted',
-                    attachments: [],
-                  }
+                  ...m,
+                  ...(payload.message || {}),
+                  deleted: true,
+                  deletedAt: payload.deletedAt,
+                  deletedBy: payload.deletedBy,
+                  content: 'This message was deleted',
+                  attachments: [],
+                }
                 : m
             ),
           };
@@ -781,13 +880,13 @@ function AppLayout() {
       const updateReadList = (list) => list.map((message) => (
         messageIds.some((id) => id.toString() === (message._id || message.id)?.toString())
           ? {
-              ...message,
-              isRead: true,
-              readBy: [
-                ...(message.readBy || []).filter((reader) => (reader.userId?._id || reader.userId)?.toString() !== userId.toString()),
-                { userId, readAt },
-              ],
-            }
+            ...message,
+            isRead: true,
+            readBy: [
+              ...(message.readBy || []).filter((reader) => (reader.userId?._id || reader.userId)?.toString() !== userId.toString()),
+              { userId, readAt },
+            ],
+          }
           : message
       ));
       if (conversationId) {
@@ -834,6 +933,12 @@ function AppLayout() {
       loadContacts();
     };
 
+    const handleReconnect = () => {
+      loadConversations();
+      loadChannels();
+    };
+
+    socket.on('connect', handleReconnect);
     socket.on('message:new', handleNewDirectMessage);
     socket.on('channel:message:new', handleNewChannelMessage);
     socket.on('message:edited', handleMessageEdited);
@@ -857,6 +962,7 @@ function AppLayout() {
     socket.on('invitation:accepted', handleMemberChanged);
 
     return () => {
+      socket.off('connect', handleReconnect);
       socket.off('message:new', handleNewDirectMessage);
       socket.off('channel:message:new', handleNewChannelMessage);
       socket.off('message:edited', handleMessageEdited);
@@ -879,7 +985,7 @@ function AppLayout() {
       socket.off('organization:members_updated', handleMemberChanged);
       socket.off('invitation:accepted', handleMemberChanged);
     };
-  }, [socket, currentUserId, selectedChat, selectedChannel, activeTab, loadContacts]);
+  }, [socket, currentUserId, loadContacts, loadConversations, loadChannels]);
 
   // Load pinned messages for a specific conversation or channel scope
   const loadPinnedForScope = async (scopeId, type = 'conversation') => {
@@ -1072,13 +1178,13 @@ function AppLayout() {
             [convId]: (prev[convId] || []).map((message) =>
               unreadIds.some((id) => id.toString() === (message._id || message.id)?.toString())
                 ? {
-                    ...message,
-                    isRead: true,
-                    readBy: [
-                      ...(message.readBy || []).filter((r) => (r.userId?._id || r.userId || r)?.toString() !== currentUserId),
-                      { userId: currentUserId, readAt },
-                    ],
-                  }
+                  ...message,
+                  isRead: true,
+                  readBy: [
+                    ...(message.readBy || []).filter((r) => (r.userId?._id || r.userId || r)?.toString() !== currentUserId),
+                    { userId: currentUserId, readAt },
+                  ],
+                }
                 : message
             ),
           }));
@@ -1144,13 +1250,13 @@ function AppLayout() {
               [chId]: (prev[chId] || []).map((message) =>
                 unreadIds.some((id) => id.toString() === (message._id || message.id)?.toString())
                   ? {
-                      ...message,
-                      isRead: true,
-                      readBy: [
-                        ...(message.readBy || []).filter((r) => (r.userId?._id || r.userId || r)?.toString() !== currentUserId),
-                        { userId: currentUserId, readAt },
-                      ],
-                    }
+                    ...message,
+                    isRead: true,
+                    readBy: [
+                      ...(message.readBy || []).filter((r) => (r.userId?._id || r.userId || r)?.toString() !== currentUserId),
+                      { userId: currentUserId, readAt },
+                    ],
+                  }
                   : message
               ),
             }));
@@ -1192,13 +1298,13 @@ function AppLayout() {
               [convId]: (prev[convId] || []).map((m) =>
                 unreadIds.some((id) => id.toString() === (m._id || m.id)?.toString())
                   ? {
-                      ...m,
-                      isRead: true,
-                      readBy: [
-                        ...(m.readBy || []).filter((r) => (r.userId?._id || r.userId || r)?.toString() !== currentUserId),
-                        { userId: currentUserId, readAt },
-                      ],
-                    }
+                    ...m,
+                    isRead: true,
+                    readBy: [
+                      ...(m.readBy || []).filter((r) => (r.userId?._id || r.userId || r)?.toString() !== currentUserId),
+                      { userId: currentUserId, readAt },
+                    ],
+                  }
                   : m
               ),
             }));
@@ -1228,13 +1334,13 @@ function AppLayout() {
               [chId]: (prev[chId] || []).map((m) =>
                 unreadIds.some((id) => id.toString() === (m._id || m.id)?.toString())
                   ? {
-                      ...m,
-                      isRead: true,
-                      readBy: [
-                        ...(m.readBy || []).filter((r) => (r.userId?._id || r.userId || r)?.toString() !== currentUserId),
-                        { userId: currentUserId, readAt },
-                      ],
-                    }
+                    ...m,
+                    isRead: true,
+                    readBy: [
+                      ...(m.readBy || []).filter((r) => (r.userId?._id || r.userId || r)?.toString() !== currentUserId),
+                      { userId: currentUserId, readAt },
+                    ],
+                  }
                   : m
               ),
             }));
@@ -1508,6 +1614,26 @@ function AppLayout() {
     }
   };
 
+  // Promote Member to Channel Admin
+  const handlePromoteChannelAdmin = async (channelId, userId) => {
+    try {
+      const data = await promoteChannelAdmin(channelId, userId);
+      if (data.success && data.channel) {
+        const updated = data.channel;
+        setChannels((prev) =>
+          prev.map((ch) => ((ch._id || ch.id)?.toString() === channelId ? updated : ch))
+        );
+        if ((selectedChannel?._id || selectedChannel?.id)?.toString() === channelId) {
+          setSelectedChannel(updated);
+        }
+      }
+      return data;
+    } catch (err) {
+      console.error('Failed to promote channel admin:', err);
+      throw err;
+    }
+  };
+
   // Level 12: Forward Message Handler
   const handleForwardMessage = async (messageId, targetData) => {
     try {
@@ -1748,9 +1874,9 @@ function AppLayout() {
       setSelectedChannel((prev) =>
         prev && (prev._id || prev.id)?.toString() === channelId.toString()
           ? {
-              ...prev,
-              members: (prev.members || []).filter((m) => (m._id || m.id || m)?.toString() !== currentUserId),
-            }
+            ...prev,
+            members: (prev.members || []).filter((m) => (m._id || m.id || m)?.toString() !== currentUserId),
+          }
           : prev
       );
       setChannelMessagesMap((prev) => {
@@ -1897,6 +2023,14 @@ function AppLayout() {
         companyName: orgName,
         orgId: notification.organization?._id || notification.organization,
       });
+      return;
+    }
+
+    // Case H: Reminder Due Notification
+    if (notification.type === 'reminder_due' || notification.reminderId) {
+      setActiveTab('reminders');
+      setSelectedChat(null);
+      setSelectedChannel(null);
       return;
     }
   };
@@ -2198,46 +2332,35 @@ function AppLayout() {
 
   return (
     <div className="app-workspace-layout">
+      {isSidebarOpen && (
+        <div className="sidebar-backdrop" onClick={() => setIsSidebarOpen(false)}></div>
+      )}
       {/* 1. Primary Left Navigation Rail */}
       <Sidebar
         activeTab={activeTab}
         onSelectTab={handleSelectTab}
-        isMobileOpen={isMobileSidebarOpen}
-        onCloseMobile={() => setIsMobileSidebarOpen(false)}
+        isMobileOpen={isSidebarOpen}
+        onCloseMobile={() => setIsSidebarOpen(false)}
         onOpenProfileModal={() => setIsProfileModalOpen(true)}
         onOpenCompanyModal={() => setIsCompanyModalOpen(true)}
         onOpenSettingsModal={() => setIsSettingsModalOpen(true)}
+        calendarConnected={calendarConnected}
       />
 
-      {/* Mobile Drawer Backdrop */}
-      {isMobileSidebarOpen && (
-        <div
-          className="sidebar-backdrop"
-          onClick={() => setIsMobileSidebarOpen(false)}
-          aria-hidden="true"
-        />
-      )}
-
       {/* 2. Main Workspace Body */}
-      <div className="workspace-main-wrapper">
+      <div className="workspace-main-wrapper" data-tab={activeTab}>
         <Header
           activeTab={activeTab}
           selectedTitle={
             activeTab === 'chats'
-              ? (selectedChat
-                  ? (isSelfConversation(selectedChat, currentUserId)
-                      ? 'Me (Notes to self)'
-                      : selectedChat?.name || otherParticipant?.name || 'Chats')
-                  : 'Chats')
+              ? null
               : activeTab === 'channels'
-              ? 'Channels'
-              : null
+                ? 'Channels'
+                : null
           }
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          onToggleMobileSidebar={() => setIsMobileSidebarOpen((prev) => !prev)}
           onSelectNotification={handleSelectNotification}
-          onSelectSearchResult={handleSelectSearchResult}
+          onOpenProfileModal={() => setIsProfileModalOpen(true)}
+          onOpenSidebar={() => setIsSidebarOpen(true)}
         />
 
         {/* Prominent Suspension / Expiry Banner when organization is suspended or expired */}
@@ -2287,15 +2410,31 @@ function AppLayout() {
               isPlanDisabled={isPlanDisabled}
               isExpired={isExpired}
               isSuspended={isSuspended}
+              onAddToCalendar={handleAddToCalendar}
+            />
+          </div>
+        ) : activeTab === 'reminders' ? (
+          <div className="workspace-reminders-view-wrapper">
+            <ReminderPage />
+          </div>
+        ) : activeTab === 'notes' ? (
+          <div className="workspace-notes-view-wrapper">
+            <NotesPage />
+          </div>
+        ) : activeTab === 'calendar' ? (
+          <div className="workspace-notes-view-wrapper">
+            <GoogleCalendarPanel
+              onConnectionChange={(connected) => setCalendarConnected(connected)}
+              prefillEvent={calendarPrefill}
+              onPrefillConsumed={() => setCalendarPrefill(null)}
             />
           </div>
         ) : (
           <div className="workspace-content-grid">
             {/* Middle Sub-Panel */}
             <div
-              className={`workspace-subpanel ${
-                selectedChat || selectedChannel ? 'hide-on-mobile-when-chat-open' : ''
-              }`}
+              className={`workspace-subpanel ${selectedChat || selectedChannel ? 'hide-on-mobile-when-chat-open' : ''
+                }`}
             >
               {activeTab === 'chats' && (
                 <ChatList
@@ -2312,11 +2451,13 @@ function AppLayout() {
                   onSelectChat={handleSelectConversation}
                   onSelectChannel={handleSelectChannel}
                   searchQuery={searchQuery}
+                  onSearchChange={setSearchQuery}
                   loading={loadingConversations || loadingChannels}
                   pinnedChatIds={pinnedChats}
                   pinnedChannelIds={pinnedChannels}
                   onPinItem={handlePinItem}
                   onUnpinItem={handleUnpinItem}
+                  onSelectNotification={handleSelectNotification}
                 />
               )}
 
@@ -2349,10 +2490,30 @@ function AppLayout() {
                   loading={loadingContacts}
                 />
               )}
+
+              {/* Mobile FAB for Chats/Channels */}
+              {(activeTab === 'chats' || activeTab === 'channels') && (
+                <button
+                  className="mobile-fab"
+                  onClick={() => {
+                    if (activeTab === 'channels') {
+                      if (!isPlanDisabled) setIsCreateChannelOpen(true);
+                    } else {
+                      setActiveTab('contacts');
+                    }
+                  }}
+                  aria-label={activeTab === 'channels' ? 'Create Channel' : 'New Chat'}
+                >
+                  <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                  </svg>
+                </button>
+              )}
             </div>
 
             {/* Right Stage (Direct Chat / Channel Chat / Directory) */}
-            <main className="workspace-stage">
+            <main className={`workspace-stage ${!selectedChat && !selectedChannel ? 'hide-on-mobile-when-no-chat' : ''}`}>
               {activeTab === 'chats' && (
                 selectedChat ? (
                   <ChatWindow
@@ -2412,6 +2573,7 @@ function AppLayout() {
                     onLeaveChannel={handleLeaveChannel}
                     onUpdateChannel={handleUpdateChannel}
                     onAddMembers={handleAddChannelMembers}
+                    onPromoteAdmin={handlePromoteChannelAdmin}
                     availableUsers={contacts}
                     userRole={user?.role}
                     onTyping={() => currentChannelId && emitChannelTyping(currentChannelId)}
@@ -2461,6 +2623,7 @@ function AppLayout() {
                     onLeaveChannel={handleLeaveChannel}
                     onUpdateChannel={handleUpdateChannel}
                     onAddMembers={handleAddChannelMembers}
+                    onPromoteAdmin={handlePromoteChannelAdmin}
                     availableUsers={contacts}
                     userRole={user?.role}
                     onTyping={() => currentChannelId && emitChannelTyping(currentChannelId)}
@@ -2592,7 +2755,21 @@ function AppLayout() {
       <MobileBottomNav
         activeTab={activeTab}
         onSelectTab={handleSelectTab}
+        isAdmin={['owner', 'admin'].includes(user?.role)}
       />
+      
+      {/* Due Reminder Notification Modal */}
+      {dueReminder && (
+        <DueReminderModal
+          reminder={dueReminder}
+          onClose={() => setDueReminder(null)}
+          onSnoozeSuccess={() => setDueReminder(null)}
+          onCompleteSuccess={() => setDueReminder(null)}
+        />
+      )}
+
+      {/* WebRTC Calling Overlay */}
+      <CallOverlay />
     </div>
   );
 }

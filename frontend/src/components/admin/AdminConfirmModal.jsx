@@ -16,7 +16,7 @@ function AdminConfirmModal({
       <div
         className="modal-container admin-confirm-modal"
         onClick={(e) => e.stopPropagation()}
-        style={{ maxWidth: '440px', width: '90%', animation: 'modalFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1)' }}
+        style={{ maxWidth: '440px', width: '90%', animation: 'modalFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1)', background: 'var(--card-bg, #ffffff)' }}
       >
         <div className="modal-header" style={{ padding: '18px 24px', borderBottom: '1px solid var(--card-border)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>

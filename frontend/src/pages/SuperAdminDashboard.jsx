@@ -733,7 +733,7 @@ function SuperAdminDashboard() {
                       </div>
                       <div className="sa-plan-card-price">
                         <span className="sa-price-currency">₹</span>
-                        <span className="sa-price-amount">199</span>
+                        <span className="sa-price-amount">0</span>
                         <span className="sa-price-period">/mo</span>
                       </div>
                       <div className="sa-plan-card-features">
@@ -754,7 +754,7 @@ function SuperAdminDashboard() {
                       </div>
                       <div className="sa-plan-card-price">
                         <span className="sa-price-currency">₹</span>
-                        <span className="sa-price-amount">599</span>
+                        <span className="sa-price-amount">199</span>
                         <span className="sa-price-period">/mo</span>
                       </div>
                       <div className="sa-plan-card-features">
@@ -773,9 +773,7 @@ function SuperAdminDashboard() {
                         <PlanBadge plan="enterprise" />
                       </div>
                       <div className="sa-plan-card-price">
-                        <span className="sa-price-currency">₹</span>
-                        <span className="sa-price-amount">999</span>
-                        <span className="sa-price-period">/mo</span>
+                        <span className="sa-price-amount" style={{ fontSize: '1.5rem' }}>Custom</span>
                       </div>
                       <div className="sa-plan-card-features">
                         <div className="sa-plan-feature">

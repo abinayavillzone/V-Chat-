@@ -73,10 +73,6 @@ export const NotificationProvider = ({ children }) => {
         if (isDuplicate) return prev;
         return [notification, ...prev];
       });
-
-      if (!notification.isRead) {
-        setUnreadCount((prev) => prev + 1);
-      }
     };
 
     // B. Real-Time Single Notification Read (Multi-tab sync)
@@ -105,25 +101,32 @@ export const NotificationProvider = ({ children }) => {
       setUnreadCount(0);
     };
 
-    // D. Real-Time Direct Unread Count Update
+    // D. Real-Time Direct Unread Count Update (Authoritative from DB)
     const handleUnreadCountUpdate = ({ unreadCount: directCount }) => {
       if (typeof directCount === 'number') {
         setUnreadCount(Math.max(0, directCount));
       }
     };
 
+    // E. Synchronize on WebSocket reconnect
+    const handleReconnect = () => {
+      loadUnreadCount();
+    };
+
     socket.on('notification:new', handleNewNotification);
     socket.on('notification:read', handleNotificationRead);
     socket.on('notifications:read_all', handleNotificationsReadAll);
     socket.on('notification:unread_count', handleUnreadCountUpdate);
+    socket.on('connect', handleReconnect);
 
     return () => {
       socket.off('notification:new', handleNewNotification);
       socket.off('notification:read', handleNotificationRead);
       socket.off('notifications:read_all', handleNotificationsReadAll);
       socket.off('notification:unread_count', handleUnreadCountUpdate);
+      socket.off('connect', handleReconnect);
     };
-  }, [socket]);
+  }, [socket, loadUnreadCount]);
 
   // 3. Mark Single Notification as Read
   const markAsRead = async (notificationId) => {

@@ -12,8 +12,26 @@ function ChannelMembersPopup({
   canManage = false,
   onClose,
   onOpenAddMembers,
+  onPromoteAdmin,
 }) {
   const [searchQuery, setSearchQuery] = useState('');
+  const [promotingId, setPromotingId] = useState(null);
+
+  const currentUserIsAdmin = canManage || (channel.admins || []).some(
+    (a) => (a._id || a.id || a)?.toString() === currentUserId?.toString()
+  ) || (channel.createdBy?._id || channel.createdBy)?.toString() === currentUserId?.toString();
+
+  const handlePromote = async (memberId) => {
+    if (!onPromoteAdmin || promotingId) return;
+    setPromotingId(memberId);
+    try {
+      await onPromoteAdmin(channel._id || channel.id, memberId);
+    } catch (err) {
+      console.error('Failed to promote member to admin:', err);
+    } finally {
+      setPromotingId(null);
+    }
+  };
 
   const filteredMembers = useMemo(() => {
     if (!Array.isArray(members)) return [];
@@ -145,6 +163,9 @@ function ChannelMembersPopup({
                 const isChannelCreator = channel.createdBy && (
                   (channel.createdBy._id || channel.createdBy)?.toString() === memberId
                 );
+                const isChannelAdmin = (channel.admins || []).some(
+                  (a) => (a._id || a.id || a)?.toString() === memberId
+                ) || member.role === 'admin' || isChannelCreator;
 
                 return (
                   <div key={memberId} className="channel-member-row">
@@ -161,12 +182,11 @@ function ChannelMembersPopup({
                       <div className="channel-member-name-row">
                         <span className="channel-member-name">{memberName}</span>
                         {isSelf && <span className="badge-you">(You)</span>}
-                        {isChannelCreator && (
+                        {isChannelCreator ? (
                           <span className="channel-role-tag creator">Creator</span>
-                        )}
-                        {member.role === 'admin' && !isChannelCreator && (
+                        ) : isChannelAdmin ? (
                           <span className="channel-role-tag admin">Admin</span>
-                        )}
+                        ) : null}
                         {member.role === 'owner' && (
                           <span className="channel-role-tag owner">Owner</span>
                         )}
@@ -175,6 +195,17 @@ function ChannelMembersPopup({
                     </div>
 
                     <div className="channel-member-presence">
+                      {currentUserIsAdmin && !isChannelCreator && !isChannelAdmin && onPromoteAdmin && (
+                        <button
+                          type="button"
+                          className="btn-promote-admin"
+                          onClick={() => handlePromote(memberId)}
+                          disabled={promotingId === memberId}
+                          title={`Promote ${memberName} to Channel Admin`}
+                        >
+                          {promotingId === memberId ? 'Promoting...' : 'Make Admin'}
+                        </button>
+                      )}
                       <span className={`channel-presence-pill ${isOnline ? 'online' : 'offline'}`}>
                         <span className="presence-dot" />
                         {isOnline ? 'Online' : 'Offline'}

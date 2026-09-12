@@ -20,6 +20,22 @@
   --stage-bg: #f8fafc;
   --hover-bg: #f1f5f9;
   --active-bg: #e2e8f0;
+
+  /* Global Spacing System */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+
+  /* Standard Dimensions */
+  --header-height: 60px;
+  --input-height: 40px;
+
+  /* Border Radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
 }
 
 html.dark-theme,

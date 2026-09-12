@@ -121,7 +121,6 @@ function InChatSearch({
       {/* Search Input Bar */}
       <div className="inchat-search-bar">
         <div className="inchat-search-input-box">
-          <span className="inchat-search-icon">🔍</span>
           <input
             ref={inputRef}
             type="text"
